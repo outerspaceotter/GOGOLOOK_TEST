@@ -1,0 +1,127 @@
+1.請問,在履歷資料中,哪一段專案經歷,是您認為最足以展現您在資料分析領
+域的技術成績?也請說明,在該專案中,整個專案的成員規模大約是多少?其
+中,您個人的具體職責、分工、貢獻是什麼?過程中有遇到什麼技術性或非技
+術性的困難?是如何克服的?
+
+Q:我想分享我目前在執行的專案：開發LINE官方帳號的用戶標籤數據應用方案
+數據應該開發專案成員：3人(主管：監督計畫進度，同事A：計畫PM、標籤文字命名規範、For客戶的視覺畫圖與統計報表設計)
+我在專案中的職責是：
+1.數據應用方案的環境規劃(從IT後臺抓資料、ETL、table schema儲存與應用)
+2.ETL清洗(python、SQL)
+3.數據應用模組設計(python)：客戶參與度、偏好度、客戶生命階段標籤、價格敏感度...等。
+困難點：溝通與規劃。廣告公司大多是行銷背景的人，因此我主管與同事對於數據流、程式、數學與統計的觀念較少。我覺得在觀念上的溝通
+是目前遇到較大的困難。
+克服的方式：盡量用畫流程圖、視覺化或是請IT人員協助背書。
+
+
+2.在參與的專案中,哪一個是覺得最困難的?哪一個是覺得最有趣的?並請描述
+原因。
+
+最困難：如上題。我覺得是不同領域背景人員的溝通與協調。
+最有趣的地方：技術問題或是規劃框架的完成。因為我本身不是資工背景，但我還蠻喜歡學新的應用技術。
+當突破新的困難點時，很有成就感。
+
+
+3. 除了工作的內容外,還有關注哪些技術議題?是透過何種管道接觸呢?
+偶爾會看FB數據分析或資料科學社團的資訊，最近打算複習一下影像辨識的數據方法。
+ 
+''' 
+Q1_2 請使用 Python 撰寫一段程式，從資料庫中取出資料，並在程式中計算每天回報使用者的數量。
+''' 
+# 在pandas中實現對MySQL資料庫的讀寫： 
+# 匯入必要模組 
+import pandas as pd 
+from sqlalchemy import create_engine 
+# 初始化資料庫連線
+engine = create_engine('mysql+pymysql://root:Sylvia000605@127.0.0.1:3306/test_schema',echo=True) 
+# 查詢語句 
+sql = ''' 
+select * from test_sample_01; 
+''' 
+# sql語句抓資料， 資料庫連線 
+df = pd.read_sql_query(sql, engine) 
+# 取日期
+df['ts'] = pd.to_datetime(df['ts'])
+df['date'] = df['ts'].dt.date
+
+df_dayuser = df.groupby('date').nunique('id')
+df_dayuser = df_dayuser.drop(['date'],axis=1)
+df_dayuser = df_dayuser.rename(columns={"id": "回報人數", "ts": "回報次數"})
+
+
+SELECT  AA.cs_days , AA.p_cnt / BB.ids AS cs_ratio
+FROM 
+(
+SELECT cs_days,
+	   COUNT(id) AS p_cnt
+FROM (
+SELECT * FROM 
+	(SELECT * FROM 
+		( SELECT id, max(days) cs_days, min(ts_date) start_date, max(ts_date) end_date 
+          FROM (SELECT id, 
+		       @cont_day := 
+			(CASE WHEN (@last_id = id AND DATEDIFF(ts, @last_dt) = 1) THEN (@cont_day + 1) 
+                              WHEN (@last_id = id AND DATEDIFF(ts, @last_dt) < 1) THEN (@cont_day + 0) ELSE 1 END) AS days, 
+					   (@cont_ix := (@cont_ix + IF(@cont_day = 1, 1, 0))) AS cont_ix, 
+                       @last_id := id , 
+                       @last_dt := ts ts_date 
+				FROM (  SELECT id, DATE(ts) ts 
+						FROM test_sample_01 
+                        GROUP BY id, DATE(ts) 
+                        ORDER BY id, DATE(ts) ) AS t, 
+		(  SELECT @last_id := '', @last_dt := '', @cont_ix := 0, @cont_day := 0) AS t1 
+		) AS t2 
+	GROUP BY id, cont_ix 
+		) tmp ORDER BY cs_days DESC
+    ) ntmp 
+    GROUP BY id
+    ) gntmp
+    GROUP BY cs_days ) AA,
+    (SELECT COUNT(DISTINCT id ) as ids FROM test_sample_01 ) BB
+WHERE AA.cs_days IN (2,5,7,14,30)
+    
+SELECT BB.r_no, AA.r_year, AA.r_month, AA.r_day, AA.r_hour
+FROM (
+SELECT A1.r_no,COUNT(A1.r_no) AS nno, A1.r_pm25, std(A2.r_pm25) as pm_std, avg(A2.r_pm25) AS pm_avg
+FROM(
+SELECT r_no, r_year, r_month, r_day, r_hour, r_pm25, @s:=@s+1
+FROM prsa_data, (SELECT @s:=0) as s
+) AS A1
+LEFT JOIN (
+SELECT r_no, r_year, r_month, r_day, r_hour, r_pm25
+FROM prsa_data
+)  AS A2 ON A1.r_year = A2.r_year AND A1.r_month = A2.r_month 
+			AND ((A1.r_no - A2.r_no <4) AND (A1.r_no - A2.r_no >0))
+GROUP BY A1.r_no
+HAVING COUNT(A1.r_no) = 3 ) AS BB 
+LEFT JOIN prsa_data AA ON BB.r_no = AA.r_no
+WHERE (BB.r_pm25 - BB.pm_avg) > 3*BB.pm_std
+SELECT * FROM (
+SELECT	r_no, r_year, r_month, r_day, r_hour
+FROM (
+SELECT BB.r_no, AA.r_year, AA.r_month, AA.r_day, AA.r_hour, ((BB.r_pm25 - BB.pm_avg) - 3*BB.pm_std ) AS o_v
+FROM (
+SELECT A1.r_no,COUNT(A1.r_no) AS nno, A1.r_pm25, std(A2.r_pm25) as pm_std, avg(A2.r_pm25) AS pm_avg
+FROM(	SELECT r_no, r_year, r_month, r_day, r_hour, r_pm25
+		FROM prsa_data, (SELECT @s:=0) as s	) AS A1
+LEFT JOIN (	SELECT r_no, r_year, r_month, r_day, r_hour, r_pm25
+			FROM prsa_data
+			)  AS A2 ON A1.r_year = A2.r_year AND A1.r_month = A2.r_month 
+						AND ((A1.r_no - A2.r_no <4) AND (A1.r_no - A2.r_no >0))
+GROUP BY A1.r_no
+HAVING COUNT(A1.r_no) = 3 ) AS BB 
+LEFT JOIN prsa_data AA ON BB.r_no = AA.r_no
+WHERE (BB.r_pm25 - BB.pm_avg) > 3*BB.pm_std ) AS AAA
+WHERE r_month IN (1,2,3)
+ORDER BY o_v DESC
+LIMIT 10,10 ) AS AAAA
+ORDER BY r_no ASC
+
+
+不好意思，第三題我沒時間寫完。
+
+可以的話我想說明我預計如何解第三題。
+
+我計畫用Pandas與apriori的演算法做關聯分析。
+1.我打算用每個人的購物組合跑一次關聯分析，找出不分國家群體的族群與其推薦的商品。
+2.按照國家分群體，依照不同的國家群體做關聯分析，找出族群與其推薦的商品。
