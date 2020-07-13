@@ -49,6 +49,7 @@ df_dayuser = df_dayuser.drop(['date'],axis=1)
 df_dayuser = df_dayuser.rename(columns={"id": "回報人數", "ts": "回報次數"})
 
 
+Q1_3
 SELECT  AA.cs_days , AA.p_cnt / BB.ids AS cs_ratio
 FROM 
 (
@@ -79,7 +80,9 @@ SELECT * FROM
     GROUP BY cs_days ) AA,
     (SELECT COUNT(DISTINCT id ) as ids FROM test_sample_01 ) BB
 WHERE AA.cs_days IN (2,5,7,14,30)
-    
+
+
+Q2_1
 SELECT BB.r_no, AA.r_year, AA.r_month, AA.r_day, AA.r_hour
 FROM (
 SELECT A1.r_no,COUNT(A1.r_no) AS nno, A1.r_pm25, std(A2.r_pm25) as pm_std, avg(A2.r_pm25) AS pm_avg
@@ -96,6 +99,9 @@ GROUP BY A1.r_no
 HAVING COUNT(A1.r_no) = 3 ) AS BB 
 LEFT JOIN prsa_data AA ON BB.r_no = AA.r_no
 WHERE (BB.r_pm25 - BB.pm_avg) > 3*BB.pm_std
+
+
+Q2_2
 SELECT * FROM (
 SELECT	r_no, r_year, r_month, r_day, r_hour
 FROM (
@@ -117,7 +123,7 @@ ORDER BY o_v DESC
 LIMIT 10,10 ) AS AAAA
 ORDER BY r_no ASC
 
-
+Q3
 不好意思，第三題我沒時間寫完。
 
 可以的話我想說明我預計如何解第三題。
